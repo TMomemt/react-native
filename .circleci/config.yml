@@ -96,40 +96,89 @@ aliases:
     command: node ./scripts/run-ci-e2e-tests.js --android --retries 3;
 
 
-  # -------------------------
-  #  ALIASES: Branch Filters
-  # -------------------------
-  - &filter-only-master
-    branches:
-      only: master
+  install_buck_tooling:
+    steps:
+      - restore_cache:
+          keys:
+            - v3-buck-v2019.01.10.01-{{ checksum "scripts/circleci/buck_fetch.sh" }}}
+            - v3-buck-v2019.01.10.01-
+      - run:
+          name: Install BUCK
+          command: |
+            buck --version
+            # Install related tooling
+            if [[ ! -e ~/okbuck ]]; then
+              git clone https://github.com/uber/okbuck.git ~/okbuck --depth=1
+            fi
+      - save_cache:
+          paths:
+            - ~/buck
+            - ~/okbuck
+          key: v3-buck-v2019.01.10.01-{{ checksum "scripts/circleci/buck_fetch.sh" }}
 
-  - &filter-only-master-stable
-    branches:
-      only:
-        - /.*-stable/
-        - master
+  brew_install:
+    parameters:
+      package:
+        description: Homebrew package to install
+        type: string
+    steps:
+      - run: HOMEBREW_NO_AUTO_UPDATE=1 brew install << parameters.package >> >/dev/null
 
-  - &filter-only-stable
-    branches:
-      only:
-        - /.*-stable/
+  with_brew_cache_span:
+    parameters:
+      steps:
+        type: steps
+    steps:
+      - restore_cache:
+          keys:
+            - v1-brew
+      - steps: << parameters.steps >>
+      - save_cache:
+          paths:
+            - /usr/local/Homebrew
+            - ~/Library/Caches/Homebrew
+          key: v1-brew
 
-  - &filter-ignore-gh-pages
-    branches:
-      ignore: gh-pages
+  with_pods_cache_span:
+    parameters:
+      steps:
+        type: steps
+    steps:
+      - run:
+          name: Setup CocoaPods cache
+          # Copy RNTester/Podfile.lock since it can be changed by pod install
+          command: cp RNTester/Podfile.lock RNTester/Podfile.lock.bak
+      - restore_cache:
+          keys:
+            - v1-pods-{{ .Environment.CIRCLE_JOB }}-{{ checksum "RNTester/Podfile.lock.bak" }}
+            - v1-pods-{{ .Environment.CIRCLE_JOB }}-
+      - steps: << parameters.steps >>
+      - save_cache:
+          paths:
+            - RNTester/Pods
+          key: v1-pods-{{ .Environment.CIRCLE_JOB }}-{{ checksum "RNTester/Podfile.lock.bak" }}
 
-  - &filter-only-version-tags
-    # Both of the following conditions must be included!
-    # Ignore any commit on any branch by default.
-    branches:
-      ignore: /.*/
-    # Only act on version tags.
-    tags:
-      only: /v[0-9]+(\.[0-9]+)*(\-rc(\.[0-9]+)?)?/
+  download_gradle_dependencies:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-gradle-{{ checksum "ReactAndroid/build.gradle" }}-{{ checksum "scripts/circleci/gradle_download_deps.sh" }}
+            - v1-gradle-
+      - run:
+          name: Download Dependencies Using Gradle
+          command: ./scripts/circleci/gradle_download_deps.sh
+      - save_cache:
+          paths:
+            - ~/.gradle
+            - ReactAndroid/build/downloads
+            - ReactAndroid/build/third-party-ndk
+          key: v1-gradle-{{ checksum "ReactAndroid/build.gradle" }}-{{ checksum "scripts/circleci/gradle_download_deps.sh" }}
 
-  - &filter-only-forked-pull-requests
-    branches:
-      only: /^pull\/.*$/
+  download_buck_dependencies:
+    steps:
+      - run:
+          name: Download Dependencies Using Buck
+          command: ./scripts/circleci/buck_fetch.sh
 
   # -------------------------
   #     ALIASES: Workflows
@@ -335,7 +384,11 @@ jobs:
   # -------------------------
   # Runs unit tests on iOS devices
   test_ios:
-    <<: *macos_defaults
+    executor: reactnativeios
+    parameters:
+      use_frameworks:
+        type: boolean
+        default: false
     environment:
       - REPORTS_DIR: "./reports"
     steps:
@@ -362,15 +415,18 @@ jobs:
             touch .watchmanconfig
       - save-cache: *save-brew-cache
 
-      - run:
-          name: Start Metro packager
-          command: yarn start --max-workers=1 || echo "Can't start packager automatically"
-          background: true
+      - when:
+          condition: << parameters.use_frameworks >>
+          steps:
+            - run:
+                name: Set USE_FRAMEWORKS=1
+                command: echo "export USE_FRAMEWORKS=1" >> $BASH_ENV
 
-      - run:
-          name: Start WebSocket test server
-          command: open "./IntegrationTests/launchWebSocketServer.command" || echo "Can't start web socket server automatically"
-          background: true
+      - with_pods_cache_span:
+          steps:
+            - run:
+                name: Generate RNTesterPods Workspace
+                command: cd RNTester && pod install --verbose
 
       - run:
           name: Verify RNTester can be built
@@ -707,20 +763,56 @@ workflows:
 
   tests:
     jobs:
-      - test_node_lts:
-          filters: *filter-ignore-gh-pages
-
-      - checkout_code:
-          filters: *filter-ignore-gh-pages
-
-      - analyze: *run-after-checkout
-      - test_javascript: *run-after-checkout
-      - test_android: *run-after-checkout
-      - test_ios: *run-after-checkout
-      - test_end_to_end: *run-after-checkout
-      - test_docker_build:
-          filters: *filter-ignore-gh-pages
-
+      - setup:
+          name: setup_js
+          filters:
+            branches:
+              ignore: gh-pages
+      - setup:
+          name: setup_ios
+          checkout_type: ios
+          executor: reactnativeios
+          filters:
+            branches:
+              ignore: gh-pages
+      - setup:
+          name: setup_android
+          checkout_type: android
+          executor: reactnativeandroid
+          filters:
+            branches:
+              ignore: gh-pages
+      - test_js:
+          requires:
+            - setup_js
+      - test_js_e2e:
+          requires:
+            - setup_js
+            - test_js
+      - test_android:
+          requires:
+            - setup_android
+      - test_ios:
+          requires:
+            - setup_ios
+      - test_ios:
+          name: test_ios_frameworks
+          use_frameworks: true
+          requires:
+            - setup_ios
+      - test_ios_e2e:
+          requires:
+            - setup_ios
+            - test_js
+      - test_js:
+          name: test_js_lts
+          executor: nodelts
+          requires:
+            - setup_js
+      - test_docker:
+          filters:
+            branches:
+              ignore: gh-pages
   releases:
     jobs:
       - checkout_code:
