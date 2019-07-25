@@ -27,10 +27,7 @@ Pod::Spec.new do |s|
   s.author                 = "Facebook, Inc. and its affiliates"
   s.platforms              = { :ios => "9.0", :tvos => "9.2" }
   s.source                 = source
-  s.source_files           = "*.{h,m}"
-  s.preserve_paths         = "package.json", "LICENSE", "LICENSE-docs"
-  s.header_dir             = "React"
-
-  s.dependency "React-Core", version
-  s.dependency "React-RCTImage", version
+  s.source_files           = "**/*.{c,h,m,mm,cpp}"
+  s.header_dir             = "RCTRequired"
+  s.static_framework       = true
 end

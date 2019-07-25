@@ -14,7 +14,7 @@
 //   limitations under the License.
 //
 
-#import "RCTSRWebSocket.h"
+#import <React/RCTSRWebSocket.h>
 
 #import <Availability.h>
 #import <Endian.h>

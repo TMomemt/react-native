@@ -30,11 +30,9 @@ Pod::Spec.new do |s|
   s.author                 = "Facebook, Inc. and its affiliates"
   s.platforms              = { :ios => "9.0", :tvos => "9.2" }
   s.source                 = source
-  s.source_files           = "*.{cpp,h}"
-  s.compiler_flags         = folly_compiler_flags + ' ' + boost_compiler_flags
-  s.header_dir             = "jsireact"
-  s.pod_target_xcconfig    = { "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost-for-react-native\" \"$(PODS_ROOT)/Folly\" \"$(PODS_ROOT)/DoubleConversion\"" }
-  s.xcconfig               = { "OTHER_CFLAGS" => "$(inherited) -DRN_TURBO_MODULE_ENABLED" }
+  s.source_files           = "**/*.{c,h,m,mm,cpp}"
+  s.header_dir             = "FBReactNativeSpec"
+  s.static_framework       = true
 
   s.dependency "React-Core", version
   s.dependency "React-cxxreact", version
