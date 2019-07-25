@@ -32,7 +32,6 @@ Pod::Spec.new do |s|
   s.source                 = source
   s.source_files           = "**/*.{c,h,m,mm,cpp}"
   s.header_dir             = "FBReactNativeSpec"
-  s.static_framework       = true
 
   s.dependency "React-Core", version
   s.dependency "React-cxxreact", version
