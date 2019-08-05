@@ -14,7 +14,6 @@
 #import <React/RCTUtils.h>
 #import <React/UIView+React.h>
 
-#import <React/RCTUIImageViewAnimated.h>
 #import <React/RCTImageBlurUtils.h>
 #import <React/RCTImageLoader.h>
 #import <React/RCTImageUtils.h>

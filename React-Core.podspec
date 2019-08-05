@@ -81,7 +81,6 @@ Pod::Spec.new do |s|
   s.subspec "RCTWebSocket" do |ss|
     ss.source_files = "Libraries/WebSocket/*.{h,m}"
     ss.dependency "React-Core/Default", version
-    ss.dependency "React-fishhook", version
   end
 
   # Add a subspec containing just the headers for each
