@@ -54,6 +54,7 @@
     "!template/package-lock.json"
   ],
   "scripts": {
+    "postinstall": "npm install",
     "start": "react-native start",
     "test": "jest",
     "test-ci": "jest --maxWorkers=2 --ci --reporters=\"default\" --reporters=\"jest-junit\"",
