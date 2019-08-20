@@ -241,20 +241,7 @@ def getNdkBuildFullPath() {
 }
 
 task buildReactNdkLib(dependsOn: [prepareJSC, prepareHermes, prepareBoost, prepareDoubleConversion, prepareFolly, prepareGlog], type: Exec) {
-    inputs.dir("$projectDir/../ReactCommon")
-    inputs.dir("src/main/jni")
-    outputs.dir("$buildDir/react-ndk/all")
-    commandLine(getNdkBuildFullPath(),
-            "NDK_PROJECT_PATH=null",
-            "NDK_APPLICATION_MK=$projectDir/src/main/jni/Application.mk",
-            "NDK_OUT=" + temporaryDir,
-            "NDK_LIBS_OUT=$buildDir/react-ndk/all",
-            "THIRD_PARTY_NDK_DIR=$buildDir/third-party-ndk",
-            "REACT_COMMON_DIR=$projectDir/../ReactCommon",
-            "REACT_SRC_DIR=$projectDir/src/main/java/com/facebook/react",
-            "-C", file("src/main/jni/react/jni").absolutePath,
-            "--jobs", project.findProperty("jobs") ?: Runtime.runtime.availableProcessors()
-    )
+    // do nothing
 }
 
 task cleanReactNdkLib(type: Exec) {
