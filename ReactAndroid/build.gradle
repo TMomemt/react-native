@@ -241,7 +241,7 @@ def getNdkBuildFullPath() {
 }
 
 task buildReactNdkLib(dependsOn: [prepareJSC, prepareHermes, prepareBoost, prepareDoubleConversion, prepareFolly, prepareGlog], type: Exec) {
-    // do nothing
+    commandLine("pwd") // do nothing
 }
 
 task cleanReactNdkLib(type: Exec) {
